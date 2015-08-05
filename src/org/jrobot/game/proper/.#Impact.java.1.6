@@ -1,0 +1,80 @@
+package org.jrobot.game.proper;
+
+/**
+ * Impact, holds a set of impacts cause by a cell property.
+ *
+ * @author savio
+ * @version $Id: Impact.java,v 1.6 2005/07/03 01:47:55 savio Exp $
+ *
+ *  TODO XXX : rever os efeitos gerados
+ */
+
+public class Impact {
+
+    /**
+     * Time increment
+     */
+    static int timeInc;
+
+    /**
+     * Error increment
+     */
+    static int errorInc;
+
+    /**
+     * Noise increment
+     */
+    static int noiseInc;
+
+    /**
+     * Class constructor
+     *
+     * @param _time  Time increment for a given command
+     * @param _err   Error related to a expected answer
+     * @param _noise Applied to `message' command.
+     */
+    public Impact(int _time, int _err, int _noise) {
+        timeInc = _time;
+        errorInc = _err;
+        noiseInc = _noise;
+    }
+
+    /**
+     * Get time increment
+     *
+     * @return Time increment caused by cell property
+     */
+    public int getTimeInc() {
+        return timeInc;
+    }
+
+    /**
+     * Get error
+     *
+     * @return Error caused by cell property
+     */
+    public int getErrorInc() {
+        return errorInc;
+    }
+
+    /**
+     * Get noise increment
+     *
+     * @return Noise increment caused by cell property
+     */
+    public int getNoiseInc() {
+        return noiseInc;
+    }
+
+    /**
+     * Adds two Impacts. The result is recorded on the object
+     * that calls this method.
+     *
+     * @param _impact An object of type Impact
+     */
+    public void sum(Impact _impact) {
+        timeInc += _impact.getTimeInc();
+        errorInc += _impact.getErrorInc();
+        noiseInc += _impact.getNoiseInc();
+    }
+}

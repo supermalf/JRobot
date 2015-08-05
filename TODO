@@ -1,0 +1,74 @@
+TODO LISTS
+
+PENDENCIAS:
+[v] melhorar o Makefile fazendo um comando javac so', usando vars, etc
+[v] javadocs 
+
+[v] implementar acumuladores em Map para retornar efeitos de propriedades
+[v] threads
+[X] ver esquema de eventos
+[v] Fetch -> XXX , achar um nome melhor pra `prospectar'
+[x] fazer um javadoc mais detalhado sobre os comandos quando terminar
+[v] setar algumas classes de org.jrobot.game como `protected'
+[x] rever os comentarios/textos do codigo e melhorar
+[x] abrir projeto no eclipse/idea e tirar os warnings
+[x] rever se todas as interfaces estao consistentes
+[X] implementar reflexao na MapLoader pra ver se as props sao dynamics/statics
+[x] atualizar runtime um chart de prospeccao e gerar jpg no final? (facil)
+[v] implementar getClientHost(), blabla... RemoteServer -> UnicastRemoteObject
+[v] DAO -> Iterator
+[X] TESTAR!!!!!!! (muito)
+[X] FATWARE?!?! tirar excesso de inutilidades (funcoes redundantes, etc)
+[v] abstract -> metodo vazio (Properties)
+[v] fazer 100% = 100 barris
+[x] ver a diferenca de WIDTH-HEIGHT! (importante.. sistema inconsistente)
+[x] fazer synchronized coisas!!!
+[x] tirar os Log.debug()
+[x] fazer .jar
+[x] mouse over, indica quanto de petroleo o robo ja prospectou
+[x] deletar classes nao usadas
+[x] tirar os java.io.Serializable desnecessarios
+
+[x] updateador da GUI
+[v] cmds
+[v] propers
+[x] synchronized
+[v] mapa.lua do mapa estatico
+
+URGENTE:
+[v] fazer binding de propriedades
+[v] implementar driver do robo
+[v] implementar lua 
+[v] fazer loop da Game com threads, etc
+[x] implementar os 3 tipos de robo
+[x] GUI
+[v] entender porque do bug do MapLoader
+[x] fazer contagem total de robos quando um robo for adicionado
+
+MAP EDITOR:
+[X] restringir nome de propriedade sem espacos (e outros caracteres estranhos)
+
+GUI:
+[x] shutdown server
+[x] start server
+[x] uma vez recebido a senha, guardar ate' que receba outra senha ou que o jogo seja fechado.
+
+EXTRA:
+[X] implementar tipo de jogador observador?! (facil)
+[x] fazer gerador de mapa atraves de funcao (em lua)
+[x] chat!
+
+MODULOS QUE PRECISAM SER IMPLEMTADOS PRO JOGO FUNCIONAR (EM ORDEM?):
+
+[v] game.GameDAO, game.GameDAOImpl (medio)
+[v] game.Team, game.TeamList       (facil)
+[v] game.Score                     (facil)
+[v] game.time.*			   (medio)
+[v] game.robot.*                   (medio)
+[v] game.ctrl.manual.*             (dificil)
+[x] game.ctrl.programmed.*         (dificil)
+[v] game.Game                      (medio)
+[x] gui.* + Jrobot.java            (dificil)
+
+x = 10 + 10*(alt_prox - alt_atual)
+[x] janela introdutoria

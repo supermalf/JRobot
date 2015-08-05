@@ -1,0 +1,103 @@
+package org.jrobot.game.robot;
+
+import org.jrobot.game.robot.cmd.CommandList;
+import org.jrobot.game.robot.cmd.Command;
+
+import java.rmi.RemoteException;
+
+/**
+ * Robot thread.
+ *
+ * @author savio
+ * @version $Id: RobotThread.java,v 1.3 2005/07/03 06:49:49 savio Exp $
+ */
+
+public class RobotThread extends Thread
+{
+    public Robot robott;
+    public String commandString;
+    public CommandList commandList;
+
+    /**
+     * Class constructor
+     *
+     * @param robot Robot
+     */
+    public RobotThread(Robot robot)
+    {
+        /* Instance of the Robot Thread*/
+        robott = robot;
+
+        /* Setting  the Command String no thread process value */
+        commandString = "-";
+
+        try
+        {
+            robot.setThread(this);
+            robott.setReady(true);
+            commandList = new CommandList();
+        }
+        catch(RemoteException e)
+        {
+            System.err.println(e);
+        }
+
+
+    }
+
+    /**
+     * Thread executes here
+     */
+    public void run()
+    {
+        /* Keep the robot thread alive */
+        while (true)
+        {
+            try
+            {
+                if (commandString.equals("-"))
+                {
+                    Thread.sleep(10);                    
+                    //robott.setReady(true);
+                }
+                else
+                {
+                    robott.setReady(false);
+                    /* Getting the command to execute */
+                    Command command = commandList.cmdGet(commandString);
+
+                    if (command != null)
+                        command.run(robott);
+
+                    /* Clear the thread process */
+                    commandString = "-";
+                    robott.setReady(true);
+                }
+            }
+            catch(Exception e)
+            {
+                System.err.println(e);
+            }
+       }
+    }
+
+    /**
+     * Set command string
+     *
+     * @param command Command string
+     * @return True if succeeded
+     */
+    public boolean setCommand(String command) {
+        if(commandString.equals("-")) {
+            commandString = command;
+        }
+        return false;
+    }
+
+    /**
+     * Clear command string
+     */
+    private void clearCommand() {
+        commandString = "-";
+    }
+}

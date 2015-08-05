@@ -1,0 +1,12 @@
+Jun 15 2005 20:07:50:ERROR:Could not start server.
+Jun 15 2005 20:07:54:ERROR:Error shutting down server. Exiting with code -1.
+[Jun 29 2005 20:41:06]:[INFO]:==== LOG STARTED ====
+[Jun 29 2005 20:41:06]:[DEBUG]:Loading lua map file: default.lua
+[Jun 29 2005 20:41:06]:[GAME]:Static Property loaded: Depth
+[Jun 29 2005 20:41:06]:[GAME]:Static Property loaded: Pressure
+[Jun 29 2005 20:41:06]:[GAME]:Dynamic Property loaded: Pressure
+[Jun 29 2005 20:41:06]:[GAME]:Dynamic Property loaded: Noise
+[Jun 29 2005 20:41:06]:[GAME]:4/4 props loaded, 2 dynamics. map size: [10,10].
+[Jun 29 2005 20:41:07]:[ERROR]:Could not start server : java.rmi.ServerException: RemoteException occurred in server thread; nested exception is: 
+	java.rmi.UnmarshalException: error unmarshalling arguments; nested exception is: 
+	java.lang.ClassNotFoundException: org.jrobot.game.RemoteGameImpl_Stub

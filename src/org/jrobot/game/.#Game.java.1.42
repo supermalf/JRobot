@@ -1,0 +1,444 @@
+/* XXX implementar Game como uma thread a parte */
+
+package org.jrobot.game;
+
+import org.jrobot.game.proper.*;
+import org.jrobot.game.robot.*;
+import org.jrobot.game.time.*;
+import org.jrobot.log.Log;
+
+import java.util.LinkedList;
+import java.util.ListIterator;
+import java.rmi.Naming;
+
+/**
+ * This class  is the  kernel of JRobot  Game. Here stands  almost all
+ * objects used to keep things rolling. All robots, maps and teams are
+ * instanced  in this class.   RemoteGame interface  provides wrappers
+ * exported to  the client  so they can  access these  objects without
+ * cheating (hopefully).
+ *
+ * @author savio
+ * @version $Id: Game.java,v 1.42 2005/07/04 00:29:42 savio Exp $
+ */
+
+/* 
+ * XXX KNOWN  BUG: 
+ * Since the identification is  made using hostnames, the server won't
+ * understand two or more users from the same IP address.
+ */
+
+public class Game {
+
+    /**
+     * Robots list 
+     */
+    private static RobotList robots;
+    
+    /**
+     * Team list
+     */
+    private static TeamList teams;
+    
+    /**
+     * Game clock: remaining/elapsed time
+     */
+    private static GameClock clock;
+
+    /**
+     * Main score
+     */
+    private static Score score;
+
+    /**
+     * Game map with all property layers, etc
+     */
+    private static Map map;
+
+    /**
+     * Player list
+     */
+    private static PlayerList players;
+
+    /**
+     * Game configuration object
+     */
+    private static GameConfig gameConfig;
+
+    /**
+     * Game status, if true game is running, false is waiting
+     */
+    private static boolean gameStarted = false;
+
+    /**
+     * Cass  constructor;  Generates  a  new  game  instance  used  as
+     * context.  This  method loads  a map from  a lua file,  waits all
+     * clients to register  (add bots, etc) and upon  a server signal,
+     * starts the clock accepting commands from clients.
+     *
+     * @param cfg object containing all configuration needed
+     */
+    public Game(GameConfig cfg) {
+        gameConfig = cfg;
+        
+        Log.debug("Loading lua map file: " + cfg.getMapFile());
+        map = (Map) new MapLoader(cfg.getMapFile(), cfg.getProperList());
+        
+        robots = new RobotList();
+        players = new PlayerList();
+        teams = new TeamList();
+        score = new Score(teams, map.getTotalScore());
+        clock = new GameClock(cfg.getGameTime());
+    }
+
+    /**
+     * Adds a new team to the game. This is the first command called from
+     * client. This method registers a player as a team.
+     *
+     * @param playerName Player name
+     * @param teamName   Team name
+     * @param playerHost Player host
+     * @param rgbColor   RGB Color
+     * @return true if player is accepted or already exists.
+     */
+    public Player addPlayer(String playerName, String teamName,
+                            String playerHost, float[] rgbColor)
+        throws PlayerException, TeamException {
+        Player tempPlayer;
+
+        ListIterator playerList = players.listIterator(0);
+        Player newPlayer = new Player(playerName, playerHost);
+        
+        /* Check if player already exists */
+        while (playerList.hasNext()) {
+            tempPlayer = (Player) playerList.next();
+            
+            if (tempPlayer.compare(newPlayer, false)) {
+                /* Player object matches name and ip address */
+                Log.alert("User " + playerName + "@" + playerHost + " reconnected?");
+                return tempPlayer;
+            } else if (tempPlayer.name.equals(playerName)) {
+                /* Name already exists with a different address */
+                throw new PlayerException("Game.addPlayer()",
+                                          "Player with this name already exists.");
+            } else if (tempPlayer.host.equals(playerHost)) {
+                /* User with other name already logged with this address */
+                if (GameUtils.secureMode()) {
+                    throw new PlayerException("Game.addPlayer()",
+                            "Only one connection per IP address allowed.");
+                } else {
+                    Log.alert("Clone detected from " + playerHost);
+                    Log.debug("Turn on secure mode to avoid clones.");
+                }
+            }
+        }
+
+        /* Is there room for a new player? */
+        if (players.size() >= gameConfig.getNumbTeams()) {
+            throw new PlayerException("Game.addPlayer()", "Server is full!");
+        }
+        
+        /* Check if Team name or color already taken */
+        if (teams.colorIsTaken(rgbColor)) {
+            throw new TeamException("Game.addPlayer()", "Color already taken!");
+        }
+
+        /* create team, set user password and relate them */
+        Team newTeam = new Team(teamName, rgbColor);
+        newPlayer.setRandomPass();
+        newPlayer.setTeam(newTeam);
+        newTeam.setPlayer(newPlayer);
+
+        /* add player and team  */
+        players.add(newPlayer);
+        teams.add(newTeam);
+
+        /* everything went fine, just make some log entries and return */
+        Log.game("User " + playerName + "@" + playerHost + " logged as team " + teamName + ".");
+        Log.notice(players.size() + "/" + gameConfig.getNumbTeams() + " users logged in.");
+        if (players.size() == gameConfig.getNumbTeams()) {
+            Log.game("Server is full: " + players.size() + " players.");
+        }
+
+        /* returns a copy of player object */
+        return newPlayer;
+    }
+
+    /**
+     * Deletes an authenticated player.
+     *
+     * @param player Player
+     * @return true if player was successfully removed.
+     */
+    public boolean delPlayer(Player player) throws PlayerException {
+        Player tempPlayer;
+        Team tempTeam;
+        boolean remove = false;
+
+        ListIterator playersList = players.listIterator(0);
+        while (playersList.hasNext()) {
+            tempPlayer = (Player) playersList.next();
+
+            if (tempPlayer.compare(player, false)) {
+                if (tempPlayer.password.equals(player.getPass())) {
+                    remove = true;
+                }
+            }
+        }
+
+        Team team = player.getTeam();
+        ListIterator teamsList = teams.listIterator(0);
+        while (teamsList.hasNext()) {
+            tempTeam = (Team) teamsList.next();
+
+            if (tempTeam.compare(team)) {
+                if (remove) {
+                    playersList.remove();
+                    teamsList.remove();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns the impact of a command
+     *
+     * @param robot
+     * @param cmd   Command as string
+     */
+    public static Impact finalImpact(Robot robot, String cmd) {
+        return map.affectSum(robot, cmd);
+    }
+
+    /**
+     * XXX: verificar conflito de robos com mesmo nome?! XXX
+     *
+     * Adds new robot with remote controller and bind it via RMI.
+     *
+     * @param robotName robot name, the object will be binded with this name.
+     * @param player    Player
+     * @return true if robot was successfully added.
+     */
+    public boolean addRemoteRobot(String robotName, Player player) {
+
+        Team tempTeam = player.getTeam();
+        Robot newRobot;
+        RobotThread newThread;
+
+        try {
+            /* XXX verificar posicao livre e adicionar robo randomicamente nela XXX */
+            newRobot = new RobotImpl(robotName, tempTeam, 0, 0, 0, 0);
+            newThread = new RobotThread(newRobot);
+            robots.add(newThread);
+
+            Log.debug("Registering robot as: " + robotName + "." + player.getPass());
+
+            Naming.rebind(robotName + "." + player.getPass(), newRobot);
+            Log.game("Robot "+ robotName  +" registered to player "+ player.getName() +"!");
+
+        } catch (Exception e) {
+            Log.debug("Could not register robot "+ robotName +": " + e);
+            e.printStackTrace();
+            return false;
+        }
+
+        /* add robot */
+        robots.add(newRobot);
+
+        /* everything went fine, just make some log entries and return */
+        Log.game("Robot " + robotName + "@" + player.getHost() + " joined team " + tempTeam.getName() + ".");
+
+        return true;
+    }
+
+    public boolean addProgrammedRobot(String robotName, Player player) {
+        return true;
+    }
+
+    /**
+     * Get game configuration
+     *
+     * @return keyCode Key Code
+     */
+    public static GameConfig getConfig() {
+        return gameConfig;
+    }
+
+    /**
+     * Get robot list
+     *
+     * @return Robot List
+     */
+    public RobotList getRobotList() {
+        return robots;
+    }
+
+    /**
+     * Get team list
+     *
+     * @return Team List
+     */
+    public TeamList getTeamList() {
+        return teams;
+    }
+
+    /**
+     * Get game time
+     *
+     * @return Game GetTime
+     */
+    public GameClock getGameTime() {
+        return clock;
+    }
+
+    /**
+     * Get score
+     *
+     * @return Score
+     */
+    public Score getScore() {
+        return score;
+    }
+
+    /**
+     * Get Map
+     *
+     * @return Map
+     */
+    public Map getMap() {
+        return map;
+    }
+
+    /**
+     * Get Player List
+     *
+     * @return Player List
+     */
+    public PlayerList getPlayerList() {
+        return players;
+    }
+
+    /**
+     * Game is started?
+     *
+     * @return boolean game started
+     */
+    public static boolean isGameStarted() {
+        return gameStarted;
+    }
+
+    /**
+     * End game
+     * XXX: para as threads dos robos e seta gameStarted = false;
+     */
+    public static void endGame() {
+        ListIterator threadList = robots.listIterator(0);
+        RobotThread currThread;
+        
+        /* sstop all threads */
+        while(threadList.hasNext()) {
+            currThread = (RobotThread) threadList.next();
+            currThread.destroy();
+        }
+ 
+        /* start game */
+        gameStarted = false;
+        Log.game("Game ended.");
+    }
+
+    /**
+     * Start game
+     * XXX: thread.start(), gameStarted = true;
+     */
+    public void startGame() {        
+        ListIterator threadList = robots.listIterator(0);
+        RobotThread currThread;
+        
+        /* wake all threads */
+        while(threadList.hasNext()) {
+            currThread = (RobotThread) threadList.next();
+            currThread.start();
+        }
+ 
+        /* start game */
+        gameStarted = true;
+    }
+
+    /**
+     * Get remaining time
+     *
+     * @return Remaining time
+     */
+    public int getRemainingTime() {
+        return GameClock.remaining;
+    }
+
+    /**
+     * Get elapsed time
+     *
+     * @return Elapsed time
+     */
+    public int getElapsedTime() {
+        return GameClock.elapsed;
+    }
+    
+    /**
+     * Get property value by coordinate
+     * 
+     * @param x coordinate
+     * @param y coordinate
+     * @return Float
+     */
+    public static float getPropValue(String prop, int x, int y) {
+        return map.getPropValue(prop, x, y);
+    }
+
+    /**
+     * Set robot position
+     *
+     * @param x coordinate
+     * @param y coordinate
+     * @param value 0 = empty cell, 1 = robot
+     * @return True if succeeded changing its value
+     */
+    public boolean setRobotPosition(int x, int y, int value) {
+        return map.setRobotPosition(x, y, value);
+    }
+
+    /**
+     * Set flag position. All positions with flags are already 
+     * explored cells.
+     *
+     * @param x coordinate
+     * @param y coordinate
+     * @param value 0 = empty cell, 1 = flag
+     * @return True if succeeded changing its value
+     */
+   public boolean setFlagPosition(int x, int y, int value) {
+       return map.setFlagPosition(x, y, value);
+   }
+
+    /**
+     * Get robot position
+     *
+     * @param x coordinate
+     * @param y coordinate
+     * @return Value
+     */
+    public int getRobotPosition(int x, int y) {
+        return map.getRobotPosition(x, y);
+    }
+
+    /**
+     * Get flag position
+     *
+     * @param x coordinate
+     * @param y coordinate
+     * @return Value
+     */
+   public int getFlagPosition(int x, int y) {
+       return map.getFlagPosition(x, y);
+   }
+}

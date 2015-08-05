@@ -1,0 +1,39 @@
+$Id: NOTES,v 1.1.1.1 2005/06/16 06:02:54 savio Exp $
+
+[x] design orientado a objeto pouco elaborado? teria que ter mais 'extends' e 
+    interfaces (NAO, design ok)
+[x] usar mais design patterns (NEM TANTO)
+[x] tem como identificar de quem e' o acesso from within rmi server? (NAO PRECISA)
+
+TODO:
+
+[1] javadocs
+[2] gui -> malf
+
+GUI:
+[server] -> [run,start game]
+            [server configuration panel]
+[client] -> [ip, team name, robots:...]
+client -> connect -> wait negotiation -> game started popup
+
+setenv CVSROOT savio@core.cx:/home/savio/cvs
+
+falta na gui: 
+[1] properties
+[2] log on/off + file path
+
+[*] implementar GameObserver.java
+[*] implementar GameSingleton.java
+[*] confirmar: DAO ou Iterator?!
+[*] fazer proxy: sobrecarga de private e public!
+
+[*] NAO SE EMPOLGA COM DESIGN PATTERN!!!
+
+[*] Command extends Timer OU GameTime extends Timer ? Ou tanto faz?
+[*] implementar heranca esquematizada no pacote 'ctrl'
+
+[*] verificar o design de mapas (esta confuso!)
+
+[***] EMPACOTAR!!
+
+[*] CVS-tag all
